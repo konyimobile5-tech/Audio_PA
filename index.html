@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio PA Circuit Interactive Simulation</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            font-family: 'Padauk', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        p.subtitle {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background-color: #050811;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Controls Panel */
+        .switches-panel {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 14px;
+            background: #0d1322;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        @media (min-width: 640px) {
+            .switches-panel {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .switch-card {
+            background: #172033;
+            border: 1px solid #2d3748;
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .switch-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .switch-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .switch-desc {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        /* Toggle Button Styling */
+        .toggle-btn {
+            width: 54px;
+            height: 28px;
+            border-radius: 14px;
+            background-color: #374151;
+            position: relative;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            transition: background-color 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-btn::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .toggle-btn.active-green {
+            background-color: #10b981;
+        }
+
+        .toggle-btn.active-red {
+            background-color: #ef4444;
+        }
+
+        .toggle-btn.active-blue {
+            background-color: #3b82f6;
+        }
+
+        .toggle-btn.active-green::after,
+        .toggle-btn.active-red::after,
+        .toggle-btn.active-blue::after {
+            transform: translateX(26px);
+        }
+
+        .legend-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            background: #0d1322;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #1f2937;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Audio PA Circuit Interactive Simulation</h1>
+            <p class="subtitle">ခလုတ်များ ပိတ်/ဖွင့်ခြင်းဖြင့် လျှပ်စီးကြောင်း ပြောင်းလဲပုံ သရုပ်ပြ</p>
+        </header>
+
+        <!-- Interactive Triggers Panel -->
+        <div class="switches-panel">
+            <div class="switch-card">
+                <div class="switch-info">
+                    <span class="switch-title">Analog Signal</span>
+                    <span class="switch-desc">Signal Line (Audio CODEC)</span>
+                </div>
+                <button class="toggle-btn active-green" id="btnLineOut"></button>
+            </div>
+
+            <div class="switch-card">
+                <div class="switch-info">
+                    <span class="switch-title">Volt</span>
+                    <span class="switch-desc">Power Supply Line (PMU)</span>
+                </div>
+                <button class="toggle-btn active-red" id="btnVph"></button>
+            </div>
+
+            <div class="switch-card">
+                <div class="switch-info">
+                    <span class="switch-title">Control </span>
+                    <span class="switch-desc">Control Signal (CPU)</span>
+                </div>
+                <button class="toggle-btn active-blue" id="btnControl"></button>
+            </div>
+        </div>
+
+        <!-- Canvas Circuit Diagram -->
+        <div class="canvas-container">
+            <canvas id="circuitCanvas"></canvas>
+        </div>
+
+        <!-- Legend Explanation -->
+        <div class="legend-bar">
+            <div class="legend-item"><div class="dot" style="background: #10b981;"></div> LINE_OUT (Signal)</div>
+            <div class="legend-item"><div class="dot" style="background: #ef4444;"></div> VPH (Power)</div>
+            <div class="legend-item"><div class="dot" style="background: #3b82f6;"></div> Control Signal</div>
+            <div class="legend-item"><div class="dot" style="background: linear-gradient(135deg, #10b981, #ef4444);"></div> SPK_OUT (Amplified Output)</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('circuitCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State Switches
+        let stateLineOut = true;
+        let stateVph = true;
+        let stateControl = true;
+
+        const btnLineOut = document.getElementById('btnLineOut');
+        const btnVph = document.getElementById('btnVph');
+        const btnControl = document.getElementById('btnControl');
+
+        btnLineOut.addEventListener('click', () => {
+            stateLineOut = !stateLineOut;
+            btnLineOut.classList.toggle('active-green', stateLineOut);
+        });
+
+        btnVph.addEventListener('click', () => {
+            stateVph = !stateVph;
+            btnVph.classList.toggle('active-red', stateVph);
+        });
+
+        btnControl.addEventListener('click', () => {
+            stateControl = !stateControl;
+            btnControl.classList.toggle('active-blue', stateControl);
+        });
+
+        // Particle System Setup
+        const numParticles = 12;
+        const createParticles = (count) => Array.from({ length: count }, () => ({ progress: Math.random() }));
+
+        const particles = {
+            lineOutP: createParticles(numParticles),
+            lineOutN: createParticles(numParticles),
+            vphCodec: createParticles(8),
+            vphPA: createParticles(16),
+            control: createParticles(14),
+            spkPlus: createParticles(16),
+            spkMinus: createParticles(16)
+        };
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // IC Helper Drawing
+        function drawICBox(x, y, w, h, radius, fillStyle, title) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, radius);
+            ctx.fillStyle = fillStyle;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (title) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(title, x + w / 2, y + h / 2);
+            }
+            ctx.restore();
+        }
+
+        // Arrow Helper
+        function drawArrowHead(x, y, angle, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-7, -4);
+            ctx.lineTo(-7, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Render Loop
+        function render() {
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Block Layout Positions
+            const cpuBox = { x: w * 0.05, y: h * 0.15, w: w * 0.18, h: h * 0.38 };
+            const codecBox = { x: w * 0.38, y: h * 0.18, w: w * 0.18, h: h * 0.26 };
+            const pmuBox = { x: w * 0.70, y: h * 0.13, w: w * 0.18, h: h * 0.35 };
+            const paBox = { x: w * 0.40, y: h * 0.66, w: w * 0.16, h: h * 0.22 };
+
+            const earSpkBox = { x: w * 0.37, y: h * 0.03, w: w * 0.08, h: h * 0.07 };
+            const micBox = { x: w * 0.48, y: h * 0.03, w: w * 0.08, h: h * 0.07 };
+
+            // --- STATIC LINES ---
+
+            // MI2S Lines (CPU -> Codec)
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 4; i++) {
+                const lineY = codecBox.y + 18 + i * 14;
+                ctx.beginPath();
+                ctx.moveTo(cpuBox.x + cpuBox.w, lineY);
+                ctx.lineTo(codecBox.x, lineY);
+                ctx.stroke();
+                drawArrowHead(codecBox.x, lineY, 0, '#4b5563');
+            }
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = '#9ca3af';
+            ctx.fillText('MI2S', cpuBox.x + cpuBox.w + 12, codecBox.y + 12);
+
+            // 1.8V Line (PMU -> Codec)
+            const line1v8Y = codecBox.y + codecBox.h * 0.78;
+            ctx.beginPath();
+            ctx.moveTo(pmuBox.x, line1v8Y);
+            ctx.lineTo(codecBox.x + codecBox.w, line1v8Y);
+            ctx.stroke();
+            drawArrowHead(codecBox.x + codecBox.w, line1v8Y, Math.PI, '#4b5563');
+
+            // Ear SPK & Mic Lines
+            ctx.beginPath();
+            ctx.moveTo(codecBox.x + codecBox.w * 0.3, codecBox.y);
+            ctx.lineTo(codecBox.x + codecBox.w * 0.3, earSpkBox.y + earSpkBox.h);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(codecBox.x + codecBox.w * 0.7, codecBox.y);
+            ctx.lineTo(codecBox.x + codecBox.w * 0.7, micBox.y + micBox.h);
+            ctx.stroke();
+
+
+            // --- MAIN INTERACTIVE WIRES ---
+
+            // 1. LINE_OUT_P & N (Codec -> PA)
+            const pX = codecBox.x + codecBox.w * 0.35;
+            const nX = codecBox.x + codecBox.w * 0.65;
+            
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = stateLineOut ? '#10b981' : '#374151';
+
+            ctx.beginPath();
+            ctx.moveTo(pX, codecBox.y + codecBox.h);
+            ctx.lineTo(pX, paBox.y);
+            ctx.stroke();
+            drawArrowHead(pX, paBox.y, Math.PI / 2, stateLineOut ? '#10b981' : '#374151');
+
+            ctx.beginPath();
+            ctx.moveTo(nX, codecBox.y + codecBox.h);
+            ctx.lineTo(nX, paBox.y);
+            ctx.stroke();
+            drawArrowHead(nX, paBox.y, Math.PI / 2, stateLineOut ? '#10b981' : '#374151');
+
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillStyle = stateLineOut ? '#10b981' : '#6b7280';
+            ctx.fillText('LINE_OUT_P', pX - 75, codecBox.y + codecBox.h + 18);
+            ctx.fillText('LINE_OUT_N', nX + 6, codecBox.y + codecBox.h + 18);
+
+
+            // 2. VPH Line (PMU -> Codec & PA)
+            const vphCodecY = codecBox.y + codecBox.h * 0.35;
+            const vphCornerX = pmuBox.x + pmuBox.w * 0.30;
+            const vphPaY = paBox.y + 15;
+
+            ctx.strokeStyle = stateVph ? '#ef4444' : '#374151';
+
+            // PMU -> CODEC
+            ctx.beginPath();
+            ctx.moveTo(pmuBox.x, vphCodecY);
+            ctx.lineTo(codecBox.x + codecBox.w, vphCodecY);
+            ctx.stroke();
+            drawArrowHead(codecBox.x + codecBox.w, vphCodecY, Math.PI, stateVph ? '#ef4444' : '#374151');
+
+            // PMU -> PA
+            ctx.beginPath();
+            ctx.moveTo(vphCornerX, pmuBox.y + pmuBox.h);
+            ctx.lineTo(vphCornerX, vphPaY);
+            ctx.lineTo(paBox.x + paBox.w, vphPaY);
+            ctx.stroke();
+            drawArrowHead(paBox.x + paBox.w, vphPaY, Math.PI, stateVph ? '#ef4444' : '#374151');
+
+            ctx.fillStyle = stateVph ? '#ef4444' : '#6b7280';
+            ctx.fillText('VPH', codecBox.x + codecBox.w + 12, vphCodecY - 6);
+            ctx.fillText('VPH', vphCornerX - 30, vphPaY - 6);
+
+
+            // 3. Control Line (CPU -> PA)
+            const controlY = paBox.y + paBox.h * 0.65;
+            ctx.strokeStyle = stateControl ? '#3b82f6' : '#374151';
+            ctx.beginPath();
+            ctx.moveTo(cpuBox.x + cpuBox.w * 0.5, cpuBox.y + cpuBox.h);
+            ctx.lineTo(cpuBox.x + cpuBox.w * 0.5, controlY);
+            ctx.lineTo(paBox.x, controlY);
+            ctx.stroke();
+            drawArrowHead(paBox.x, controlY, 0, stateControl ? '#3b82f6' : '#374151');
+
+            ctx.fillStyle = stateControl ? '#3b82f6' : '#6b7280';
+            ctx.fillText('Control', cpuBox.x + cpuBox.w * 0.5 + 90, controlY - 6);
+
+
+            // 4. SPK_OUT+ & SPK_OUT- Lines (PA Output)
+            const spkPlusY = paBox.y + paBox.h * 0.3;
+            const spkMinusY = paBox.y + paBox.h * 0.7;
+            const spkEndX = w * 0.90;
+
+            const isSpkActive = stateControl && (stateLineOut || stateVph);
+            ctx.strokeStyle = isSpkActive ? '#a855f7' : '#374151';
+
+            ctx.beginPath();
+            ctx.moveTo(paBox.x + paBox.w, spkPlusY);
+            ctx.lineTo(spkEndX, spkPlusY);
+            ctx.stroke();
+            drawArrowHead(spkEndX, spkPlusY, 0, isSpkActive ? '#a855f7' : '#374151');
+
+            ctx.beginPath();
+            ctx.moveTo(paBox.x + paBox.w, spkMinusY);
+            ctx.lineTo(spkEndX, spkMinusY);
+            ctx.stroke();
+            drawArrowHead(spkEndX, spkMinusY, 0, isSpkActive ? '#a855f7' : '#374151');
+
+            ctx.fillStyle = isSpkActive ? '#c084fc' : '#6b7280';
+            ctx.fillText('SPK_OUT+', paBox.x + paBox.w + 12, spkPlusY - 6);
+            ctx.fillText('SPK_OUT-', paBox.x + paBox.w + 12, spkMinusY - 6);
+
+
+            // --- DRAW IC BOXES ---
+            drawICBox(cpuBox.x, cpuBox.y, cpuBox.w, cpuBox.h, 20, '#15803d', '');
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText('CPU', cpuBox.x + cpuBox.w / 2, cpuBox.y + cpuBox.h * 0.8);
+
+            // DIGITAL SIGNAL BOX (Right border of CPU)
+            const digBox = { x: cpuBox.x + cpuBox.w * 0.25, y: cpuBox.y + cpuBox.h * 0.12, w: cpuBox.w * 0.75, h: cpuBox.h * 0.3 };
+            drawICBox(digBox.x, digBox.y, digBox.w, digBox.h, 4, '#fdba74', '');
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('Digital Signal', digBox.x + digBox.w / 2.5, digBox.y + digBox.h / 2);
+
+            drawICBox(codecBox.x, codecBox.y, codecBox.w, codecBox.h, 16, '#65a30d', '');
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('Audio CODEC', codecBox.x + codecBox.w / 4, codecBox.y + codecBox.h * 0.5);
+
+            // ANALOG SIGNAL BOX (Bottom center of CODEC)
+            const anaBox = { x: codecBox.x + codecBox.w * 0.15, y: codecBox.y + codecBox.h * 0.65, w: codecBox.w * 0.7, h: codecBox.h * 0.35 };
+            drawICBox(anaBox.x, anaBox.y, anaBox.w, anaBox.h, 4, '#fdba74', '');
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('Analog Signal', anaBox.x + anaBox.w / 5, anaBox.y + anaBox.h / 2);
+
+            drawICBox(pmuBox.x, pmuBox.y, pmuBox.w, pmuBox.h, 20, '#dc2626', 'PMU');
+            
+            // Audio PA IC
+            const paColor = stateControl ? '#78350f' : '#1f2937';
+            drawICBox(paBox.x, paBox.y, paBox.w, paBox.h, 14, paColor, 'Audio PA');
+
+            drawICBox(earSpkBox.x, earSpkBox.y, earSpkBox.w, earSpkBox.h, 6, '#2563eb', 'Ear SPK');
+            drawICBox(micBox.x, micBox.y, micBox.w, micBox.h, 6, '#f97316', 'Mic');
+
+
+            // --- ANIMATE PARTICLES (CURRENT FLOW) ---
+            const step = 0.003;
+
+            // 1. LINE_OUT Particles
+            if (stateLineOut) {
+                particles.lineOutP.forEach(p => {
+                    p.progress = (p.progress + step) % 1;
+                    const y = (codecBox.y + codecBox.h) + p.progress * (paBox.y - (codecBox.y + codecBox.h));
+                    ctx.beginPath();
+                    ctx.arc(pX, y, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#10b981';
+                    ctx.fill();
+                });
+
+                particles.lineOutN.forEach(p => {
+                    p.progress = (p.progress + step) % 1;
+                    const y = (codecBox.y + codecBox.h) + p.progress * (paBox.y - (codecBox.y + codecBox.h));
+                    ctx.beginPath();
+                    ctx.arc(nX, y, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#10b981';
+                    ctx.fill();
+                });
+            }
+
+            // 2. VPH Particles
+            if (stateVph) {
+                particles.vphCodec.forEach(p => {
+                    p.progress = (p.progress + step * 1.2) % 1;
+                    const x = pmuBox.x - p.progress * (pmuBox.x - (codecBox.x + codecBox.w));
+                    ctx.beginPath();
+                    ctx.arc(x, vphCodecY, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fill();
+                });
+
+                const vphSeg1 = vphPaY - (pmuBox.y + pmuBox.h);
+                const vphSeg2 = vphCornerX - (paBox.x + paBox.w);
+                const vphTotal = vphSeg1 + vphSeg2;
+
+                particles.vphPA.forEach(p => {
+                    p.progress = (p.progress + step * 1.2) % 1;
+                    const d = p.progress * vphTotal;
+                    let px, py;
+                    if (d <= vphSeg1) {
+                        px = vphCornerX;
+                        py = (pmuBox.y + pmuBox.h) + d;
+                    } else {
+                        px = vphCornerX - (d - vphSeg1);
+                        py = vphPaY;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fill();
+                });
+            }
+
+            // 3. Control Signal Particles
+            if (stateControl) {
+                const ctrlSeg1 = controlY - (cpuBox.y + cpuBox.h);
+                const ctrlSeg2 = (paBox.x) - (cpuBox.x + cpuBox.w * 0.5);
+                const ctrlTotal = ctrlSeg1 + ctrlSeg2;
+
+                particles.control.forEach(p => {
+                    p.progress = (p.progress + step) % 1;
+                    const d = p.progress * ctrlTotal;
+                    let px, py;
+                    if (d <= ctrlSeg1) {
+                        px = cpuBox.x + cpuBox.w * 0.5;
+                        py = (cpuBox.y + cpuBox.h) + d;
+                    } else {
+                        px = (cpuBox.x + cpuBox.w * 0.5) + (d - ctrlSeg1);
+                        py = controlY;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fill();
+                });
+            }
+
+            // 4. SPK_OUT Particles Logic
+            if (stateControl) {
+                let allowedColors = [];
+                if (stateLineOut) allowedColors.push('#10b981'); // Green
+                if (stateVph) allowedColors.push('#ef4444');     // Red
+
+                if (allowedColors.length > 0) {
+                    const drawSpkParticles = (particleList, yPos) => {
+                        particleList.forEach((p, idx) => {
+                            p.progress = (p.progress + step * 1.3) % 1;
+                            const x = (paBox.x + paBox.w) + p.progress * (spkEndX - (paBox.x + paBox.w));
+                            
+                            const color = allowedColors[idx % allowedColors.length];
+
+                            ctx.beginPath();
+                            ctx.arc(x, yPos, 4, 0, Math.PI * 2);
+                            ctx.fillStyle = color;
+                            ctx.shadowColor = color;
+                            ctx.shadowBlur = 6;
+                            ctx.fill();
+                            ctx.shadowBlur = 0;
+                        });
+                    };
+
+                    drawSpkParticles(particles.spkPlus, spkPlusY);
+                    drawSpkParticles(particles.spkMinus, spkMinusY);
+                }
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
